@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <iterator>
+#include <tuple>
+#include <string>
+#include <ostream>
 
 template <typename ValueType>
 class Iterable
@@ -16,7 +19,7 @@ public:
     {
         ValueType value;
     public:
-        explicit InputIterator(ValueType val) : value(val) {}
+        explicit InputIterator(ValueType &val) { value = val;}
         ValueType operator *() { return value; } //overloaded *p
         InputIterator& operator ++() //overloaded p++
         {
@@ -34,38 +37,41 @@ public:
     };
     virtual InputIterator begin() = 0;
     virtual InputIterator end() = 0;
-
+   // const virtual InputIterator const_begin() = 0;
+    //const virtual InputIterator const_end() = 0;
 };
 
-class Record
+
+class Journal : public Iterable<std::pair<std::tuple<int, int, int>, std::string>>
 {
-    std::tuple<int, int, int> time;
-    std::string message;
+    std::vector<std::pair<std::tuple<int, int, int>, std::string>> book;
 public:
-    Record() : time(std::make_tuple(0, 0, 0)), message("") {}
-    Record(std::tuple<int, int, int> t, std::string mes) : time(t), message(mes) {}
-            /*std::tuple<int, int, int> t = std::make_tuple(0, 0, 0),
-            std::string mes = " ");*/
-    Record(const Record &rec) : time(rec.time), message(rec.message) {}
-        /*time = rec.time;
-        message = rec.message;
-    }*/
+    InputIterator begin() { return InputIterator(*book.begin());}
+    InputIterator end() { return InputIterator(*book.end()); }
+    Journal() : book(0) {}
+    Journal(const std::pair<std::tuple<int, int, int>, std::string> &rec) { book.push_back(rec); }
+    Journal(const std::vector<std::pair<std::tuple<int, int, int>, std::string>> &b)
+    {
+        for (auto &k : b) {
+            book.push_back(k);
+        }
+    }
+    Journal(const Journal &jour) { book = jour.book;}
+    friend std::ostream& operator <<(std::ostream& out, const Journal &j);
 };
 
-class Journal : public Iterable<Record>
-{
-    std::vector<Record> book;
-public:
-    Journal() : book() {}
-    Journal(std::vector<Record> rec) : book(rec.time, rec.message) {}
-    Journal(Journal &jour) : book(jour.book) {}
-    /*InputIterator begin()
-    {*/
-
-}
+std::ostream& operator <<(std::ostream& out, Journal &j){
+        out << "  Time  " << "Name" << std::endl;
+        for (auto k : j) {
+            out << std::get<0>(std::get<0>(k)) << ":"
+                << std::get<1>(std::get<0>(k)) << ":"
+                << std::get<2>(std::get<0>(k)) << " " << k.second << std::endl;
+        }
+        return out;
+    }
 
 int main(){
-    Journal p{ {std::make_tuple(1, 2, 3), "Timmy"},
-               {std::make_tuple(12, 34, 52), "John"} };
-
+    Journal j ({std::make_tuple(1, 2, 3), "Timmy"});/*,
+                {std::make_tuple(2, 3, 4), "John"}});*/
+    std::cout << j;
 }
