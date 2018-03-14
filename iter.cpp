@@ -5,44 +5,18 @@
 #include <string>
 #include <ostream>
 
-template <typename ValueType>
+template <typename ValueType, typename InputIterator>
 class Iterable
 {
 public:
-    class InputIterator : public std::iterator<
-                              std::input_iterator_tag,
-                              ValueType,
-                              long,
-                              const ValueType*,
-                              ValueType >
-
-    {
-        ValueType value;
-    public:
-        explicit InputIterator(ValueType &val) { value = val;}
-        ValueType operator *() { return value; } //overloaded *p
-        InputIterator& operator ++() //overloaded p++
-        {
-            std::advance(*this, 1);
-            return *this;
-        }
-        InputIterator operator ++(int)
-        {
-            InputIterator tmp = *this;
-            (*this)++;
-            return tmp;
-        }
-        bool operator ==(InputIterator another) const { return value == another.value; }
-        bool operator !=(InputIterator another) const { return !( *this == another); }
-    };
     virtual InputIterator begin() = 0;
     virtual InputIterator end() = 0;
    // const virtual InputIterator const_begin() = 0;
     //const virtual InputIterator const_end() = 0;
 };
 
-
-class Journal : public Iterable<std::pair<std::tuple<int, int, int>, std::string>>
+//Write 1 class iterator
+class Journal : public Iterable<std::pair<std::tuple<int, int, int>, std::string>, >
 {
     std::vector<std::pair<std::tuple<int, int, int>, std::string>> book;
 public:
