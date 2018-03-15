@@ -42,7 +42,7 @@ public:
             book.push_back(k);
         }
     }
-    Journal(const Journal &jour) { book = jour.book;}
+ //   Journal(const Journal &jour) { book = jour.book;}
     friend std::ostream& operator <<(std::ostream& out, const Journal &j);
 };
 
