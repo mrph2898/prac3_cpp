@@ -21,7 +21,7 @@ public:
     public:
         explicit InputIterator(ValueType &val) { value = val;}
         ValueType operator *() { return value; } //overloaded *p
-        InputIterator& operator ++() //overloaded p++
+        InputIterator& operator ++() //overloaded ++p
         {
             std::advance(*this, 1);
             return *this;
@@ -29,7 +29,7 @@ public:
         InputIterator operator ++(int)
         {
             InputIterator tmp = *this;
-            (*this)++;
+            ++(*this);
             return tmp;
         }
         bool operator ==(InputIterator another) const { return value == another.value; }
