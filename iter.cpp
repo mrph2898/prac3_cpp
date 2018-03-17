@@ -43,7 +43,7 @@ public:
         }
     }
  //   Journal(const Journal &jour) { book = jour.book;}
-    friend std::ostream& operator <<(std::ostream& out, const Journal &j);
+ //   friend std::ostream& operator <<(std::ostream& out, const Journal &j);
 };
 
 std::ostream& operator <<(std::ostream& out, const Journal &j){
@@ -64,8 +64,8 @@ class PairVector : public Iterable<int, PVIterator, const_PVIterator>
     /////
     int N;
 public:
-    PVIterator begin()
-}
+    PVIterator begin();
+};
 
 int main(){
     Journal j ({std::make_tuple(1, 2, 3), "Timmy"});/*,
