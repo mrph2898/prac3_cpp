@@ -6,6 +6,7 @@
 #include <string>
 #include <ostream>
 #include <fstream>
+#include <ios>
 
 template <typename ValueType, typename InputIterator, typename const_InputIterator>
 class Iterable
@@ -112,22 +113,44 @@ class FileIterator
     word file_word;
     std::string file_name;
 public:
-    explicit FileIterator(std::string name) {
-        file_name = name;
-        std::ifstream file(file_name);
-        if (!file.is_open()) {
-            file.open(file_name);
-        }
+    void set_string(std::ifstream &file)
+    {
         if (file.eof()) {
             file.close();
         } else {
             std::getline(file, file_word, ' ');
         }
     }
+    explicit FileIterator(std::string name, std::ios_base::openmode mode = std::ios_base::in) {
+        file_name = name;
+        std::ifstream file(file_name);
+        if (!file.is_open()){
+            file.open(file_name, mode);
+        }
+        set_string(file);
+    }
     word operator *() { return file_word; }
-    //++
+    void operator ++() {
+        std::ifstream file(file_name);
+        set_string(file);
+    }
+    void operator ++(int) { (*this)++; }
+    bool operator ==(const FileIterator &f) { return (*this).file_word == f.file_word; }
+    bool operator !=(const FileIterator &f) { return !(*this == f); }
 };
-//class FileSequence : Iterable<word,
+
+class FileSequence : Iterable<word, FileIterator, const FileIterator>
+{
+    word file_word;
+    std::string file_name;
+public:
+    FileSequence(const std::string &name) { file_name = name; }
+    FileIterator begin() { return FileIterator(file_name, std::ios::in); }
+    FileIterator end() { return FileIterator(file_name, std::ios::ate); }
+    const FileIterator begin() const { return FileIterator(file_name, std::ios::in); }
+    const FileIterator end() const { return FileIterator(file_name, std::ios::ate); }
+};
+
 int main(){
     Journal j ({{std::make_tuple(1, 2, 3), "Timmy"},
                 {std::make_tuple(2, 3, 4), "John"}});
@@ -136,4 +159,8 @@ int main(){
         std::cout << s;
     }
     std::cout << j;
+    FileSequence f("testfile");
+    for (auto &&g : f) {
+        std::cout << g << std::endl;
+    }
 }
