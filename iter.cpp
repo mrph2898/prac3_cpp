@@ -7,6 +7,9 @@
 #include <ostream>
 #include <fstream>
 #include <ios>
+#include <cstdio>
+#include <stdexcept>
+#include <algorithm>
 
 template <typename ValueType, typename InputIterator, typename const_InputIterator>
 class Iterable
@@ -38,19 +41,24 @@ public:
     Journal(const std::forward_list<std::pair<Time, std::string>> &b) : book(b) {}
 };
 
-std::ostream& operator <<(std::ostream& out, const Journal &j)
+std::ostream& operator <<(std::ostream &out, const Journal &j)
 {
-        out << "Time  " << "Name" << std::endl;
-        for (auto &k : j) {
-            out << std::get<0>(std::get<0>(k)) << ":"
-                << std::get<1>(std::get<0>(k)) << ":"
-                << std::get<2>(std::get<0>(k)) << "  " << k.second << std::endl;
-        }
-        return out;
+    out << "Time  " << "Name" << std::endl;
+    for (auto &k : j) {
+        out << std::get<0>(std::get<0>(k)) << ":"
+            << std::get<1>(std::get<0>(k)) << ":"
+            << std::get<2>(std::get<0>(k)) << "  " << k.second << std::endl;
+    }
+    return out;
 }
 
 #define odd(x) ((x % 2) == 1)
-class PSIterator
+class PSIterator : public std::iterator<
+                            std::input_iterator_tag,
+                            unsigned,
+                            long,
+                            PSIterator*,
+                            unsigned>
 {
     unsigned num_in_sequence;
     unsigned N;
@@ -67,8 +75,14 @@ public:
             return N - (num_in_sequence / 2) + 1;
         }
     }
-    void operator ++() { num_in_sequence++; }
-    void operator ++(int) { (*this)++; }
+    PSIterator& operator ++() {
+        num_in_sequence++;
+        return *this;
+    }
+    PSIterator& operator ++(int) {
+        ++(*this);
+        return (*this);
+    }
     bool operator ==(const PSIterator &s) { return (*this).num_in_sequence == s.num_in_sequence; }
     bool operator !=(const PSIterator &s) { return !(*this == s); }
 };
@@ -99,7 +113,7 @@ public:
 
 std::ostream& operator <<(std::ostream& out, const PairSequence &s)
 {
-    for (auto &&k : s) {
+    for (const auto &k : s) {
         out << k << " ";
     }
     out << std::endl;
@@ -108,59 +122,134 @@ std::ostream& operator <<(std::ostream& out, const PairSequence &s)
 
 typedef std::string word;
 
-class FileIterator
+#define BIGWORD(x)\
+            if (x.fail()) {\
+                x.close();\
+                throw std::runtime_error("BIG WORD IN FILE");\
+            }
+#define BIGFILE(x,y) \
+            if (((x = y.tellg())) == -1L) {\
+                y.close();\
+                throw std::runtime_error("BIG FILE");\
+            }
+#define CANTOPEN(x)\
+            if (x.fail()) {\
+                x.close();\
+                throw std::runtime_error("CAN'T OPEN FILE");\
+            }
+
+class FileIterator : public std::iterator<
+                            std::input_iterator_tag,
+                            word,
+                            long,
+                            FileIterator*,
+                            word>
 {
     word file_word;
     std::string file_name;
+    std::ifstream file;
+    long position;
+    long eof_position;
+    bool is_it_eof;
 public:
-    void set_string(std::ifstream &file)
-    {
-        if (file.eof()) {
+    FileIterator(const std::string &name, bool eof_indicator = false) {
+        is_it_eof = eof_indicator;
+        if (!is_it_eof) {
+            file.open(name, std::ios::ate);
+            CANTOPEN(file)
+            BIGFILE(eof_position, file)
             file.close();
-        } else {
-            std::getline(file, file_word, ' ');
+            file.open(name, std::ios::in);
+            CANTOPEN(file)
+            file >> file_word;
+            BIGWORD(file)
+            BIGFILE(position, file)
         }
     }
-    explicit FileIterator(std::string name, std::ios_base::openmode mode = std::ios_base::in) {
-        file_name = name;
-        std::ifstream file(file_name);
-        if (!file.is_open()){
-            file.open(file_name, mode);
+    FileIterator(const FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
+        position(fi.position), eof_position(fi.eof_position), is_it_eof(fi.is_it_eof)
+    {
+        if (!is_it_eof) {
+            file.open(file_name);
+            file.seekg(position, file.beg);
         }
-        set_string(file);
     }
     word operator *() { return file_word; }
-    void operator ++() {
-        std::ifstream file(file_name);
-        set_string(file);
+    FileIterator& operator ++() {
+        file >> file_word;
+        if (file.eof()) {
+            file.close();
+            is_it_eof = true;
+            position = eof_position;
+        } else BIGWORD(file)
+          else BIGFILE(position, file)
+        return *this;
     }
-    void operator ++(int) { (*this)++; }
-    bool operator ==(const FileIterator &f) { return (*this).file_word == f.file_word; }
+    FileIterator& operator ++(int) {
+        ++(*this);
+        return *this;
+    }
+    bool operator ==(const FileIterator &f) {
+        return is_it_eof == f.is_it_eof;
+    }
     bool operator !=(const FileIterator &f) { return !(*this == f); }
 };
+#undef CANTOPEN
+#undef BIGFILE
+#undef BIGWORD
 
-class FileSequence : Iterable<word, FileIterator, const FileIterator>
+typedef FileIterator const_FileIterator;
+
+class FileSequence : Iterable<word, FileIterator, const_FileIterator>
 {
-    word file_word;
     std::string file_name;
 public:
     FileSequence(const std::string &name) { file_name = name; }
-    FileIterator begin() { return FileIterator(file_name, std::ios::in); }
-    FileIterator end() { return FileIterator(file_name, std::ios::ate); }
-    const FileIterator begin() const { return FileIterator(file_name, std::ios::in); }
-    const FileIterator end() const { return FileIterator(file_name, std::ios::ate); }
+    FileIterator begin() { return FileIterator(file_name); }
+    FileIterator end() { return FileIterator(file_name, 1); }
+    const_FileIterator begin() const { return FileIterator(file_name); }
+    const_FileIterator end() const { return FileIterator(file_name, 1); }
 };
 
 int main(){
-    Journal j ({{std::make_tuple(1, 2, 3), "Timmy"},
-                {std::make_tuple(2, 3, 4), "John"}});
+    //Emty example for Journal iterator
+    Journal empt;
+    std::cout << empt;
+    //Non-empty example for Journal iterator
+    Journal j ({{{3, 2, 3}, "Timmy"},
+                {{1, 3, 4}, "John"}});
+    std::cout << j;
+    //Empty (i == 1) and Non-empty example for PairSequence iterator
     for (int i = 1; i < 10; i++) {
         PairSequence s(i);
         std::cout << s;
     }
-    std::cout << j;
-    FileSequence f("testfile");
-    for (auto &&g : f) {
-        std::cout << g << std::endl;
+    //Non-empty Example for File iterator (or empty, if there is no file)
+    const std::string f_name = "testfile";
+    FileSequence f(f_name);
+    try {
+        for (const auto &g : f) {
+            std::cout << g << ' ';
+        }
+        std::cout << std::endl;
+    //Count_if for FileIterator
+        int larger_then_4 = std::count_if(f.begin(), f.end(),
+                                            [](std::string elem){ return elem.size() > 4; });
+        std::cout << "Amount of word larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
+    } catch (std::runtime_error &re) {
+        std::cout << "\x1b[31m" << re.what() << " " << "\"" << f_name << "\"" << "\x1b[0m" << std::endl;
     }
+    //Count_if for Journal
+    int registered_after2 = std::count_if(j.begin(), j.end(),
+                                          [](std::pair<Time, std::string> record){
+                                                return (std::get<0>(std::get<0>(record)) >= 2) &&
+                                                       (std::get<0>(std::get<0>(record)) >= 0) &&
+                                                       (std::get<0>(std::get<0>(record)) > 0);
+                                            });
+    std::cout << "Amount of person, who register after 2 hour is " << registered_after2 << std::endl;
+    //Find_if for PairSequenceIterator
+    PSIterator divisible_by_3;
+    PairSequence s(10);
+    divisible_by_3 = std::find_if(s.begin(), s.end(), [](unsigned num_in_seq){ return num_in_seq % 3 == 0;});
+    std::cout << "First element that divide by 3 is " << *divisible_by_3 << std::endl;
 }
