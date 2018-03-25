@@ -18,7 +18,7 @@ public:
 
     virtual InputIterator begin() = 0;
     virtual InputIterator end() = 0;
-     virtual const_InputIterator begin() const = 0;
+    virtual const_InputIterator begin() const = 0;
     virtual const_InputIterator end() const = 0;
 };
 
@@ -155,12 +155,13 @@ class FileIterator : public std::iterator<
 public:
     FileIterator(const std::string &name, bool eof_indicator = false) {
         is_it_eof = eof_indicator;
+        file_name = name;
         if (!is_it_eof) {
-            file.open(name, std::ios::ate);
+            file.open(file_name, std::ios::ate);
             CANTOPEN(file)
             BIGFILE(eof_position, file)
             file.close();
-            file.open(name, std::ios::in);
+            file.open(file_name, std::ios::in);
             CANTOPEN(file)
             file >> file_word;
             BIGWORD(file)
@@ -172,6 +173,7 @@ public:
     {
         if (!is_it_eof) {
             file.open(file_name);
+            CANTOPEN(file)
             file.seekg(position, file.beg);
         }
     }
@@ -236,7 +238,7 @@ int main(){
     //Count_if for FileIterator
         int larger_then_4 = std::count_if(f.begin(), f.end(),
                                             [](std::string elem){ return elem.size() > 4; });
-        std::cout << "Amount of word larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
+        std::cout << "First word larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
     } catch (std::runtime_error &re) {
         std::cout << "\x1b[31m" << re.what() << " " << "\"" << f_name << "\"" << "\x1b[0m" << std::endl;
     }
