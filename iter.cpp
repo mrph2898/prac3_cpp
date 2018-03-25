@@ -214,6 +214,13 @@ public:
     const_FileIterator end() const { return FileIterator(file_name, 1); }
 };
 
+template<class Itrbl>
+void print_iterable(const Itrbl& seq) {
+    for (const auto &k: seq){
+        std::cout << k << std::endl;
+    }
+}
+
 int main(){
     //Emty example for Journal iterator
     Journal empt;
@@ -239,6 +246,8 @@ int main(){
         int larger_then_4 = std::count_if(f.begin(), f.end(),
                                             [](std::string elem){ return elem.size() > 4; });
         std::cout << "First word larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
+        //Printing with f()
+        print_iterable(f);
     } catch (std::runtime_error &re) {
         std::cout << "\x1b[31m" << re.what() << " " << "\"" << f_name << "\"" << "\x1b[0m" << std::endl;
     }
@@ -255,4 +264,7 @@ int main(){
     PairSequence s(10);
     divisible_by_3 = std::find_if(s.begin(), s.end(), [](unsigned num_in_seq){ return num_in_seq % 3 == 0;});
     std::cout << "First element that divide by 3 is " << *divisible_by_3 << std::endl;
+    //Printing with f()
+    print_iterable(j);
+    print_iterable(s);
 }
