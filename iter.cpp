@@ -235,6 +235,13 @@ int main(){
         std::cout << s;
     }
     //Non-empty Example for File iterator (or empty, if there is no file)
+    const std::string test_file = "moretest";
+    FileSequence h(test_file);
+    try {
+        for(const auto &hh : h) {}
+    } catch (std::runtime_error &re) {
+        std::cout << "\x1b[31m" << re.what() << " " << "\"" << test_file << "\"" << "\x1b[0m" << std::endl;
+    }
     const std::string f_name = "testfile";
     FileSequence f(f_name);
     try {
@@ -245,7 +252,7 @@ int main(){
     //Count_if for FileIterator
         int larger_then_4 = std::count_if(f.begin(), f.end(),
                                             [](std::string elem){ return elem.size() > 4; });
-        std::cout << "First word larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
+        std::cout << "Amount of words larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
         //Printing with f()
         print_iterable(f);
     } catch (std::runtime_error &re) {
@@ -263,7 +270,7 @@ int main(){
     PSIterator divisible_by_3;
     PairSequence s(10);
     divisible_by_3 = std::find_if(s.begin(), s.end(), [](unsigned num_in_seq){ return num_in_seq % 3 == 0;});
-    std::cout << "First element that divide by 3 is " << *divisible_by_3 << std::endl;
+    std::cout << "First element that divide by 3 in sequence with N=10 is " << *divisible_by_3 << std::endl;
     //Printing with f()
     print_iterable(j);
     print_iterable(s);
