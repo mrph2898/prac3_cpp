@@ -22,23 +22,18 @@ class IgnoreIterator : public std::iterator<
     InputIterator current;
     InputIterator finish;
     bool (*predicate)(const ValueType&);
-    bool first;
 public:
     IgnoreIterator(const InputIterator &begin, const InputIterator &end, bool (*pred)(const ValueType&)) :
-        current(begin), finish(end), predicate(pred), first(true) {}
+        current(find_if(begin, end, pred)), finish(end), predicate(pred) {}
     ValueType operator *() const { return *current; }
     IgnoreIterator& operator ++() {
-        InputIterator maybe_next = find_if(current, finish, predicate);
+        /*InputIterator maybe_next = find_if(current, finish, predicate);
         if (current == maybe_next) {
             current = find_if(++current, finish, predicate);
         } else {
             current = maybe_next;
-        }
-        /*if (predicate(*current) && first) {
-            first = false;
-        } else {
-            while (!predicate(*++current) && (current != finish)){}
         }*/
+        while ((++current != finish) && !predicate(*current)){}
         return *this;
     }
     IgnoreIterator operator ++(int) {
@@ -334,11 +329,11 @@ int main(){
 //Printing with f() file
         std::cout << "\x1b[32m" << "Printing with f() for File iterator" << "\x1b[0m" << std::endl;
         print_iterable(f);
-/*//For with filter() for File
+//For with filter() for File
         std::cout << "\x1b[32m" << "For with filter() for File "<< "\x1b[0m" << std::endl;
         for (auto &&p = f.filter(amnt_of_words_larger_4); p != f.end(); ++p){
             std::cout << *p << std::endl;
-        }*/
+        }
     } catch (std::runtime_error &re) {
         std::cout << "\x1b[31m" << re.what() << " " << "\"" << f_name << "\"" << "\x1b[0m" << std::endl;
     }
@@ -370,6 +365,9 @@ int main(){
 //For with filter() for Journal
     std::cout << "\x1b[32m" << "For with filter() for Journal" << "\x1b[0m" << std::endl;
     for (auto &&p = j.filter(after_2); p != j.end(); ++p){
+        std::cout << *p << std::endl;
+    }
+    for (auto &&p = empt.filter(after_2); p != empt.end(); ++p){
         std::cout << *p << std::endl;
     }
 //For with filter() for PairSequence
