@@ -27,12 +27,6 @@ public:
         current(find_if(begin, end, pred)), finish(end), predicate(pred) {}
     ValueType operator *() const { return *current; }
     IgnoreIterator& operator ++() {
-        /*InputIterator maybe_next = find_if(current, finish, predicate);
-        if (current == maybe_next) {
-            current = find_if(++current, finish, predicate);
-        } else {
-            current = maybe_next;
-        }*/
         while ((++current != finish) && !predicate(*current)){}
         return *this;
     }
