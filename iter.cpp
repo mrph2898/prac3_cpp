@@ -45,7 +45,6 @@ template <typename ValueType,
 class Iterable
 {
 public:
-
     virtual InputIterator begin() = 0;
     virtual InputIterator end() = 0;
     virtual const_InputIterator begin() const = 0;
