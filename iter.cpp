@@ -23,8 +23,8 @@ class IgnoreIterator : public std::iterator<
     InputIterator finish;
     bool (*predicate)(const ValueType&);
 public:
-    IgnoreIterator(const InputIterator &begin, const InputIterator &end, bool (*pred)(const ValueType&)) :
-        current(find_if(begin, end, pred)), finish(end), predicate(pred) {}
+    IgnoreIterator(InputIterator begin, const InputIterator end, bool (*pred)(const ValueType&)) :
+        current(find_if(static_cast<const InputIterator&>(begin), end, pred)), finish(end), predicate(pred) {}
     ValueType operator *() const { return *current; }
     IgnoreIterator& operator ++() {
         while ((++current != finish) && !predicate(*current)){}
@@ -198,35 +198,38 @@ public:
         is_it_eof = eof_indicator;
         file_name = name;
         if (!is_it_eof) {
-            file.open(file_name, std::ios::ate);
+            /*file.open(file_name, std::ios::ate);
             CANTOPEN(file)
             BIGFILE(eof_position, file)
-            file.close();
+            file.close();*/
             file.open(file_name, std::ios::in);
             CANTOPEN(file)
             file >> file_word;
             BIGWORD(file)
-            BIGFILE(position, file)
+           // BIGFILE(position, file)
         }
     }
-    FileIterator(const FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
+    FileIterator(FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
         position(fi.position), eof_position(fi.eof_position), is_it_eof(fi.is_it_eof)
     {
-        if (!is_it_eof) {
+        file.swap(fi.file);
+        //fi.file.close();
+    }
+        /*if (!is_it_eof) {
             file.open(file_name);
             CANTOPEN(file)
             file.seekg(position, file.beg);
-        }
-    }
+        }*/
+
     word operator *() const { return file_word; }
     FileIterator& operator ++() {
         file >> file_word;
         if (file.eof()) {
             file.close();
             is_it_eof = true;
-            position = eof_position;
-        } else BIGWORD(file)
-          else BIGFILE(position, file)
+            //position = eof_position;
+        }// else BIGWORD(file)
+          //else BIGFILE(position, file)
         return *this;
     }
     FileIterator operator ++(int) {
