@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <algorithm>
+#include <functional>
 
 template <typename ValueType, class InputIterator>
 class IgnoreIterator : public std::iterator<
@@ -23,8 +24,8 @@ class IgnoreIterator : public std::iterator<
     InputIterator finish;
     bool (*predicate)(const ValueType&);
 public:
-    IgnoreIterator(InputIterator begin, const InputIterator end, bool (*pred)(const ValueType&)) :
-        current(find_if(static_cast<const InputIterator&>(begin), end, pred)), finish(end), predicate(pred) {}
+    IgnoreIterator(const InputIterator &begin, const InputIterator &end, bool (*pred)(const ValueType&)) :
+        current(std::find_if<const InputIterator&, std::function<bool(const ValueType&)>>(begin, end, pred)), finish(end), predicate(pred){}
     ValueType operator *() const { return *current; }
     IgnoreIterator& operator ++() {
         while ((++current != finish) && !predicate(*current)){}
@@ -49,7 +50,7 @@ public:
     virtual InputIterator end() = 0;
     virtual const_InputIterator begin() const = 0;
     virtual const_InputIterator end() const = 0;
-    virtual IgnoreIterator<ValueType, InputIterator> filter(bool (*)(const ValueType&)) = 0;
+    virtual IgnoreIterator<ValueType, InputIterator>&& filter(bool (*)(const ValueType&)) = 0;
 };
 
 //I use forward_list, because it doesn't needed in bidirectional access
@@ -70,10 +71,10 @@ public:
     Journal() : book(0) {}
     Journal(const std::pair<Time, std::string> &rec) { book.push_front(rec); }
     Journal(const std::forward_list<std::pair<Time, std::string>> &b) : book(b) {}
-    IgnoreIterator<std::pair<Time, std::string>, JournalIterator>
+    IgnoreIterator<std::pair<Time, std::string>, JournalIterator>&&
     filter(bool (*p)(const std::pair<Time, std::string> &))
     {
-        return IgnoreIterator<std::pair<Time, std::string>, JournalIterator>((*this).begin(), (*this).end(), p);
+        return static_cast<IgnoreIterator<std::pair<Time, std::string>, JournalIterator>&&>(IgnoreIterator<std::pair<Time, std::string>, JournalIterator>((*this).begin(), (*this).end(), p));
     }
 };
 
@@ -145,10 +146,10 @@ public:
             return PSIterator(N + 1, N);
         }
     }
-    IgnoreIterator<unsigned, PSIterator>
+    IgnoreIterator<unsigned, PSIterator>&&
     filter(bool (*p)(const unsigned &))
     {
-        return IgnoreIterator<unsigned, PSIterator>((*this).begin(), (*this).end(), p);
+        return static_cast<IgnoreIterator<unsigned, PSIterator>&&>(IgnoreIterator<unsigned, PSIterator>((*this).begin(), (*this).end(), p));
     }
 };
 #undef odd
@@ -257,10 +258,10 @@ public:
     FileIterator end() { return FileIterator(file_name, 1); }
     const_FileIterator begin() const { return FileIterator(file_name); }
     const_FileIterator end() const { return FileIterator(file_name, 1); }
-    IgnoreIterator<word, FileIterator>
+    IgnoreIterator<word, FileIterator>&&
     filter(bool (*p)(const word &))
     {
-        return IgnoreIterator<word, FileIterator>((*this).begin(), (*this).end(), p);
+        return static_cast<IgnoreIterator<word, FileIterator>&&>(IgnoreIterator<word, FileIterator>((*this).begin(), (*this).end(), p));
     }
 };
 
