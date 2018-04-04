@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <functional>
+#include <sstream>
 
 template <typename ValueType, class InputIterator>
 class IgnoreIterator : public std::iterator<
@@ -24,8 +25,8 @@ class IgnoreIterator : public std::iterator<
     InputIterator finish;
     bool (*predicate)(const ValueType&);
 public:
-    IgnoreIterator(const InputIterator &begin, const InputIterator &end, bool (*pred)(const ValueType&)) :
-        current(std::find_if<const InputIterator&, std::function<bool(const ValueType&)>>(begin, end, pred)), finish(end), predicate(pred){}
+    IgnoreIterator(InputIterator begin, InputIterator end, bool (*pred)(const ValueType&)) :
+        current(std::find_if(begin, end, pred)), finish(end), predicate(pred){}
     ValueType operator *() const { return *current; }
     IgnoreIterator& operator ++() {
         while ((++current != finish) && !predicate(*current)){}
@@ -50,7 +51,7 @@ public:
     virtual InputIterator end() = 0;
     virtual const_InputIterator begin() const = 0;
     virtual const_InputIterator end() const = 0;
-    virtual IgnoreIterator<ValueType, InputIterator>&& filter(bool (*)(const ValueType&)) = 0;
+    virtual IgnoreIterator<ValueType, InputIterator> filter(bool (*)(const ValueType&)) = 0;
 };
 
 //I use forward_list, because it doesn't needed in bidirectional access
@@ -71,10 +72,10 @@ public:
     Journal() : book(0) {}
     Journal(const std::pair<Time, std::string> &rec) { book.push_front(rec); }
     Journal(const std::forward_list<std::pair<Time, std::string>> &b) : book(b) {}
-    IgnoreIterator<std::pair<Time, std::string>, JournalIterator>&&
+    IgnoreIterator<std::pair<Time, std::string>, JournalIterator>
     filter(bool (*p)(const std::pair<Time, std::string> &))
     {
-        return static_cast<IgnoreIterator<std::pair<Time, std::string>, JournalIterator>&&>(IgnoreIterator<std::pair<Time, std::string>, JournalIterator>((*this).begin(), (*this).end(), p));
+        return IgnoreIterator<std::pair<Time, std::string>, JournalIterator>((*this).begin(), (*this).end(), p);
     }
 };
 
@@ -95,7 +96,7 @@ class PSIterator : public std::iterator<
                             unsigned,
                             long,
                             PSIterator*,
-                            PSIterator&>
+                            PSIterator>
 {
     unsigned num_in_sequence;
     unsigned N;
@@ -146,10 +147,10 @@ public:
             return PSIterator(N + 1, N);
         }
     }
-    IgnoreIterator<unsigned, PSIterator>&&
+    IgnoreIterator<unsigned, PSIterator>
     filter(bool (*p)(const unsigned &))
     {
-        return static_cast<IgnoreIterator<unsigned, PSIterator>&&>(IgnoreIterator<unsigned, PSIterator>((*this).begin(), (*this).end(), p));
+        return IgnoreIterator<unsigned, PSIterator>((*this).begin(), (*this).end(), p);
     }
 };
 #undef odd
@@ -165,22 +166,11 @@ std::ostream& operator <<(std::ostream& out, const PairSequence &s)
 
 typedef std::string word;
 
-#define BIGWORD(x)\
-            if (x.fail()) {\
-                x.close();\
-                throw std::runtime_error("BIG WORD IN FILE");\
-            }
-#define BIGFILE(x,y) \
-            if (((x = y.tellg())) == -1L) {\
-                y.close();\
-                throw std::runtime_error("BIG FILE");\
-            }
-#define CANTOPEN(x)\
-            if (x.fail()) {\
-                x.close();\
-                throw std::runtime_error("CAN'T OPEN FILE");\
-            }
-
+#define ERROR(x,y)\
+    if (x.fail()) {\
+        x.close();\
+        throw std::runtime_error(y);\
+    }
 class FileIterator : public std::iterator<
                             std::input_iterator_tag,
                             word,
@@ -191,36 +181,26 @@ class FileIterator : public std::iterator<
     word file_word;
     std::string file_name;
     std::ifstream file;
-    long position;
-    long eof_position;
     bool is_it_eof;
 public:
     FileIterator(const std::string &name, bool eof_indicator = false) {
         is_it_eof = eof_indicator;
         file_name = name;
         if (!is_it_eof) {
-            /*file.open(file_name, std::ios::ate);
-            CANTOPEN(file)
-            BIGFILE(eof_position, file)
-            file.close();*/
             file.open(file_name, std::ios::in);
-            CANTOPEN(file)
+            ERROR(file, "CAN'T OPEN FILE")
             file >> file_word;
-            BIGWORD(file)
-           // BIGFILE(position, file)
+            ERROR(file, "CAN'T READ WORD FROM FILE")
         }
     }
     FileIterator(FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
-        position(fi.position), eof_position(fi.eof_position), is_it_eof(fi.is_it_eof)
+        is_it_eof(fi.is_it_eof)
     {
+        //file.move(fi.file);
+        //file = static_cast<std::ifstream &&>(fi.file);
         file.swap(fi.file);
-        //fi.file.close();
+        //std::swap(file, fi.file);
     }
-        /*if (!is_it_eof) {
-            file.open(file_name);
-            CANTOPEN(file)
-            file.seekg(position, file.beg);
-        }*/
 
     word operator *() const { return file_word; }
     FileIterator& operator ++() {
@@ -228,9 +208,7 @@ public:
         if (file.eof()) {
             file.close();
             is_it_eof = true;
-            //position = eof_position;
-        }// else BIGWORD(file)
-          //else BIGFILE(position, file)
+        }
         return *this;
     }
     FileIterator operator ++(int) {
@@ -243,9 +221,7 @@ public:
     }
     bool operator !=(const FileIterator &f) const { return !(*this == f); }
 };
-#undef CANTOPEN
-#undef BIGFILE
-#undef BIGWORD
+#undef ERROR
 
 typedef FileIterator const_FileIterator;
 
@@ -258,10 +234,10 @@ public:
     FileIterator end() { return FileIterator(file_name, 1); }
     const_FileIterator begin() const { return FileIterator(file_name); }
     const_FileIterator end() const { return FileIterator(file_name, 1); }
-    IgnoreIterator<word, FileIterator>&&
+    IgnoreIterator<word, FileIterator>
     filter(bool (*p)(const word &))
     {
-        return static_cast<IgnoreIterator<word, FileIterator>&&>(IgnoreIterator<word, FileIterator>((*this).begin(), (*this).end(), p));
+        return IgnoreIterator<word, FileIterator>((*this).begin(), (*this).end(), p);
     }
 };
 
@@ -321,7 +297,7 @@ int main(){
 //Count_if for FileIterator
         std::cout << "\x1b[32m" << "Count_if for File iterator" << "\x1b[0m" << std::endl;
         int larger_then_4 = std::count_if(f.begin(), f.end(),
-                                            [](std::string elem){ return elem.size() > 4; });
+                                            [](word elem){ return elem.size() > 4; });
         std::cout << "Amount of words larger then 4 in file " << f_name << " is " << larger_then_4<< std::endl;
 //Printing with f() file
         std::cout << "\x1b[32m" << "Printing with f() for File iterator" << "\x1b[0m" << std::endl;
