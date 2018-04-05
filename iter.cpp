@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <functional>
-#include <sstream>
 
 template <typename ValueType, class InputIterator>
 class IgnoreIterator : public std::iterator<
@@ -167,8 +166,8 @@ std::ostream& operator <<(std::ostream& out, const PairSequence &s)
 typedef std::string word;
 
 #define ERROR(x,y)\
-    if (x.fail()) {\
-        x.close();\
+    if (x fail()) {\
+        x close();\
         throw std::runtime_error(y);\
     }
 class FileIterator : public std::iterator<
@@ -180,33 +179,34 @@ class FileIterator : public std::iterator<
 {
     word file_word;
     std::string file_name;
-    std::ifstream file;
+    std::ifstream *file;
     bool is_it_eof;
 public:
     FileIterator(const std::string &name, bool eof_indicator = false) {
         is_it_eof = eof_indicator;
         file_name = name;
         if (!is_it_eof) {
-            file.open(file_name, std::ios::in);
-            ERROR(file, "CAN'T OPEN FILE")
-            file >> file_word;
-            ERROR(file, "CAN'T READ WORD FROM FILE")
+            file = new std::ifstream(file_name, std::ios::in);
+            ERROR(file->, "CAN'T OPEN FILE")
+            *file >> file_word;
+            ERROR(file->, "CAN'T READ WORD FROM FILE")
         }
     }
-    FileIterator(FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
+    FileIterator(const FileIterator &fi) : file_word(fi.file_word), file_name(fi.file_name),
         is_it_eof(fi.is_it_eof)
     {
+        file = fi.file;
         //file.move(fi.file);
         //file = static_cast<std::ifstream &&>(fi.file);
-        file.swap(fi.file);
+        //file.swap(fi.file);
         //std::swap(file, fi.file);
     }
 
     word operator *() const { return file_word; }
     FileIterator& operator ++() {
-        file >> file_word;
-        if (file.eof()) {
-            file.close();
+        *file >> file_word;
+        if (file->eof()) {
+            file->close();
             is_it_eof = true;
         }
         return *this;
@@ -220,6 +220,7 @@ public:
         return is_it_eof == f.is_it_eof;
     }
     bool operator !=(const FileIterator &f) const { return !(*this == f); }
+    ~FileIterator(){ delete file;}
 };
 #undef ERROR
 
