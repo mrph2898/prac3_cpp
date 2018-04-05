@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <functional>
-#include <sstream>
 
 template <typename ValueType, class InputIterator>
 class IgnoreIterator : public std::iterator<
@@ -198,8 +197,9 @@ public:
     {
         //file.move(fi.file);
         //file = static_cast<std::ifstream &&>(fi.file);
-        file.swap(fi.file);
-        //std::swap(file, fi.file);
+        //file.swap(fi.file);
+        std::swap(file, fi.file);
+        if (file.is_open()) std::cout <<"HMMMMMMMMMM" <<std::endl;
     }
 
     word operator *() const { return file_word; }
